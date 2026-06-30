@@ -267,6 +267,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
 
         private final class UtilizationMonitor implements Runnable {
             private final List<SingleThreadEventExecutor> consistentlyIdleChildren = new ArrayList<>(maxChildren);
+            private final long[] lastAccumulatedActiveTime = new long[executors.length];
             private long lastCheckTimeNanos;
 
             @Override
@@ -312,7 +313,9 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
 
                     double utilization = 0.0;
                     if (!eventExecutor.isSuspended()) {
-                        long activeTime = eventExecutor.getAndResetAccumulatedActiveTimeNanos();
+                        long currentTotal = eventExecutor.getAccumulatedActiveTimeNanos();
+                        long activeTime = currentTotal - lastAccumulatedActiveTime[i];
+                        lastAccumulatedActiveTime[i] = currentTotal;
 
                         if (activeTime == 0) {
                             long lastActivity = eventExecutor.getLastActivityTimeNanos();

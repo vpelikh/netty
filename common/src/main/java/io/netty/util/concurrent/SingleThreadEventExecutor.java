@@ -553,7 +553,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
 
         long workEndTime = ticker().nanoTime();
-        accumulatedActiveTimeNanos += workEndTime - workStartTime;
+        ACCUMULATED_ACTIVE_TIME_NANOS_UPDATER.lazySet(this, accumulatedActiveTimeNanos + (workEndTime - workStartTime));
         lastActivityTimeNanos = workEndTime;
 
         afterRunningAllTasks();
@@ -623,20 +623,21 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      *
      * @param nanos The active time in nanoseconds to add.
      */
-    @SuppressWarnings("NonAtomicOperationOnVolatileField")
     protected void reportActiveIoTime(long nanos) {
         assert inEventLoop();
         if (nanos > 0) {
-            accumulatedActiveTimeNanos += nanos;
+            ACCUMULATED_ACTIVE_TIME_NANOS_UPDATER.lazySet(this, accumulatedActiveTimeNanos + nanos);
             lastActivityTimeNanos = ticker().nanoTime();
         }
     }
 
     /**
-     * Returns the accumulated active time since the last call and resets the counter.
+     * Returns the total accumulated active time (monotonically increasing, never reset).
+     *
+     * @return The total active time in nanoseconds since the executor started.
      */
-    protected long getAndResetAccumulatedActiveTimeNanos() {
-        return ACCUMULATED_ACTIVE_TIME_NANOS_UPDATER.getAndSet(this, 0);
+    protected long getAccumulatedActiveTimeNanos() {
+        return accumulatedActiveTimeNanos;
     }
 
     /**
