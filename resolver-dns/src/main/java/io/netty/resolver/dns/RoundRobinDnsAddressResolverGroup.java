@@ -22,6 +22,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.NameResolver;
+import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.RoundRobinInetAddressResolver;
 
 import java.net.InetAddress;
@@ -61,6 +62,12 @@ public class RoundRobinDnsAddressResolverGroup extends DnsAddressResolverGroup {
     protected final AddressResolver<InetSocketAddress> newAddressResolver(EventLoop eventLoop,
                                                                           NameResolver<InetAddress> resolver)
             throws Exception {
-        return new RoundRobinInetAddressResolver(eventLoop, resolver).asAddressResolver();
+        boolean preferIPv6Addresses = false;
+        if (resolver instanceof DnsNameResolver) {
+            ResolvedAddressTypes resolvedAddressTypes = ((DnsNameResolver) resolver).resolvedAddressTypes();
+            preferIPv6Addresses = resolvedAddressTypes == ResolvedAddressTypes.IPV6_PREFERRED ||
+                    resolvedAddressTypes == ResolvedAddressTypes.IPV6_ONLY;
+        }
+        return new RoundRobinInetAddressResolver(eventLoop, resolver, preferIPv6Addresses).asAddressResolver();
     }
 }
